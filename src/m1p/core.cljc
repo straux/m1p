@@ -3,6 +3,19 @@
             [clojure.string :as str]
             [clojure.walk :as walk]))
 
+
+#?(:cljd
+(defn read-keyword
+  "Workaround to avoid using clojure dart read-string which is async
+   
+   Only works with keywords and namespaced keywords."
+  [k]
+  (when (re-matches #":\w+(/\w+)?" k)
+    (let [[ns kw] (str/split (subs k 1) #"/")]
+      (if kw
+        (keyword ns kw)
+        (keyword ns))))))
+
 (defn get-string-placeholders
   "Find all interpolation placeholders in the string. An interpolation placeholder
   is a double bracket around an identifier, e.g. `\"Hello {{greetee}}\"`
@@ -16,7 +29,8 @@
   [s]
   (->> (re-seq #"\{\{([^\}]+)\}\}" s)
        (map (fn [[_ k]]
-              [(str "{{" k "}}") #?(:clj (read-string k)
+              [(str "{{" k "}}") #?(:cljd (read-keyword k)
+                                    :clj (read-string k)
                                     :cljs (reader/read-string k))]))
        set))
 
